@@ -1,62 +1,38 @@
 #define PIN_PHOTO_SENSOR_DIGITAL D5
-#define PIN_PHOTO_SENSOR_ANALOG A0
 
 int koef = 5000; // Количество вспышек на 1 кВт
-int val = 0;
 
-volatile unsigned long impulseCounter = 0;
-volatile unsigned long prevTime = 0;
-volatile unsigned long currTime = 0;
-volatile float currPower = 0;
-volatile float power = 0;
-volatile int state = 0;
-volatile int currVal = 0;
-volatile int prevVal = 0;
+volatile unsigned long impulseCounter = 0; // Счетчик импульсов
+volatile unsigned long prevTime = 0; // Время предыдущей вспышки
+volatile unsigned long currTime = 0; // Время текущей вспышки
+volatile float freq = 0;             // Частота вспышек
+volatile float currPower = 0;        // Мгновенная мощность
+float power = 0;                     // Общее энергопотребление до перезагрузки
 
 void setup() {
   Serial.begin(9600);
-//  pinMode(PIN_PHOTO_SENSOR_DIGITAL, INPUT_PULLUP);
-  pinMode(PIN_PHOTO_SENSOR_ANALOG, INPUT_PULLUP);
-//  attachInterrupt (digitalPinToInterrupt (PIN_PHOTO_SENSOR_DIGITAL), blink, CHANGE);
+  pinMode(PIN_PHOTO_SENSOR_DIGITAL, INPUT_PULLUP);
+  attachInterrupt (digitalPinToInterrupt (PIN_PHOTO_SENSOR_DIGITAL), blink, RISING);
 }
 
 void loop() {
-  val = analogRead(PIN_PHOTO_SENSOR_ANALOG);
-//  Serial.println(val);
-
-  if ((val < 500) && (state == 0))
-  {
-    state = 1;
-    impulseCounter++;
-    prevTime = currTime;
-    currTime = millis();
-    };
-  if ((val < 500) && (state == 0))
-  {
-    state = 1;
-    impulseCounter++;
-    }    
-  if ((val > 500) && (state == 1))
-  {
-    state = 0;
-    };
-
-
-    
-//  Serial.print(prevTime); Serial.print("   "); Serial.print(currTime); Serial.println("delta: "+(currTime-prevTime));
-//  Serial.print(prevVal); Serial.print("   "); Serial.print(currVal); Serial.println("  "+state);
-    Serial.println(impulseCounter);
-
-  delay(20);
+  
+  if ((millis() - prevTime) > 3000) { // Если не было миганий больше 3 секунд, то мощность = 0
+    freq = 0;         // Частота мигания = 0
+    currPower = 0;    // Получим значеение мгновенной мощности в кВт = 0
+    }
+  Serial.print(impulseCounter);Serial.print("  ");Serial.print(freq,3); Serial.print("  "); Serial.print(currPower,3); Serial.print("  "); Serial.println((float)impulseCounter/koef,3);
+  delay(1000); // Статус 1 раз в секунду
 }
+
 void blink()
 {  
   prevTime = currTime;
-  currTime = millis();
-  
-  if ((currTime - prevTime) > 150)
+  currTime = millis();  
+  if ((currTime - prevTime) > 10)
   {
     impulseCounter++;
-//    currPower = (60 * 60) / (1000 * (currTime - prevTime) / koef);    
+    freq = (float)1000/(currTime-prevTime); // Частота мигания
+    currPower = (float)(freq*3600/koef);    // Получим значеение мгновенной мощности в кВт
     };
 }
