@@ -1,17 +1,26 @@
 #include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+#include <LiquidCrystal_I2C.h> // Библиотека отсюда https://github.com/johnrickman/LiquidCrystal_I2C/archive/master.zip
 
-#define PIN_PHOTO_SENSOR_DIGITAL D5
+
+#define PIN_PHOTO_SENSOR_DIGITAL D5 // Пин куда подключен цифровой выход датчика света
 
 int koef = 5000; // Количество вспышек на 1 кВт
 
 volatile unsigned long impulseCounter = 0; // Счетчик импульсов
-volatile unsigned long prevTime = 0; // Время предыдущей вспышки
-volatile unsigned long currTime = 0; // Время текущей вспышки
-volatile float freq = 0;             // Частота вспышек
-volatile float currPower = 0;        // Мгновенная мощность
-float power = 0;                     // Общее энергопотребление до перезагрузки
+volatile unsigned long prevTime = 0;       // Время предыдущей вспышки
+volatile unsigned long currTime = 0;       // Время текущей вспышки
+volatile float freq = 0;                   // Частота вспышек
+volatile float currPower = 0;              // Мгновенная мощность
+float power = 0;                           // Общее энергопотребление до перезагрузки
 
+/* Подключение дисплея:
+ESP (NodeMCU)| LCD 1602
+-------------|-----------
+     VU      | VCC
+     GND     | GND
+     SDA     | D2
+     SDL     | D1
+*/
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 
 void setup() {
@@ -19,14 +28,10 @@ void setup() {
   lcd.begin(16,2);
   lcd.init();
   lcd.backlight();
-  lcd.setCursor(0, 0);
-  lcd.print("test");
-  lcd.setCursor(0, 1);
-  lcd.print("LCD");
+  lcd.clear();
 
-  Serial.println("...ok...");  
   pinMode(PIN_PHOTO_SENSOR_DIGITAL, INPUT_PULLUP);
-  attachInterrupt (digitalPinToInterrupt (PIN_PHOTO_SENSOR_DIGITAL), blink, RISING);
+  attachInterrupt (digitalPinToInterrupt (PIN_PHOTO_SENSOR_DIGITAL), blink, FALLING);
 }
 
 void loop() {
@@ -49,7 +54,7 @@ void blink()
 {  
   prevTime = currTime;
   currTime = millis();  
-  if ((currTime - prevTime) > 10)
+  if ((currTime - prevTime) > 10) // Чуть избавимся от "дрожания"
   {
     impulseCounter++;
     freq = (float)1000/(currTime-prevTime); // Частота мигания
